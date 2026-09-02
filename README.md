@@ -1,6 +1,6 @@
-# Jarvis backend
+# Jarvis
 
-The backend is a small FastAPI service that keeps credentials server-side and exposes chat, speech, action-planning, and optional local-app endpoints.
+Jarvis is a React/Vite frontend backed by a FastAPI service. The frontend lives in `jarvis-frontend`, uses Vite's `/api` proxy during development, and keeps Groq credentials on the backend.
 
 ## Prerequisites
 
@@ -10,21 +10,35 @@ The backend is a small FastAPI service that keeps credentials server-side and ex
 ## Install and run
 
 ```powershell
-git clone https://github.com/pruthvi828/DR-doom-Day-2-Backend.git
-cd DR-doom-Day-2-Backend
+git clone https://github.com/Vijayendra06/doomsday.git
+cd doomsday
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
+Push-Location jarvis-frontend
+npm install
+Pop-Location
 ```
 
-Edit `.env` and set `GROQ_API_KEY`. Then run:
+Edit `.env` and set `GROQ_API_KEY`. To run the backend and frontend together, use the combined launcher:
+
+```powershell
+.\run-fullstack.ps1
+```
+
+Open `http://localhost:1420`. The API binds to `127.0.0.1:8765` and is proxied by Vite, so browser requests use `/api` without a second CORS configuration.
+
+To run either service separately:
 
 ```powershell
 .\run-dev.ps1
+Push-Location jarvis-frontend
+npm run dev
+Pop-Location
 ```
 
-The API binds to `127.0.0.1:8765` by default. Check it at `http://127.0.0.1:8765/api/health`.
+The frontend uses `VITE_DEMO_MODE=false` and `VITE_API_BASE_URL=/api` by default. For a deployed frontend, set `VITE_API_BASE_URL` to the backend's public `/api` URL at build time.
 
 ## Environment variables
 
