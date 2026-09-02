@@ -30,5 +30,14 @@ async def generate_speech(text: str, voice_id: str) -> bytes:
     3. Stream audio chunks into a bytearray where chunk["type"] == "audio".
     4. Return bytes(audio).
     """
-    # Fill here using the workshop prompt
-    pass
+    if voice_id not in VOICE_IDS:
+        raise EdgeTtsError("That voice is not allowlisted.")
+    audio = bytearray()
+    try:
+        stream = edge_tts.Communicate(text=text, voice=voice_id)
+        async for chunk in stream.stream():
+            if chunk["type"] == "audio":
+                audio.extend(chunk["data"])
+    except Exception as error:
+        raise EdgeTtsError("Speech generation failed.") from error
+    return bytes(audio)

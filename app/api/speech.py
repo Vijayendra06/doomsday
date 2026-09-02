@@ -20,8 +20,7 @@ async def voices() -> VoicesResponse:
     TODO (Phase 3 - Step 8):
     Return available Edge-TTS neural voices.
     """
-    # Fill here using the workshop prompt
-    pass
+    return VoicesResponse(voices=available_voices())
 
 
 # ==============================================================================
@@ -36,8 +35,13 @@ async def tts(request: TtsRequest) -> Response:
     2. Await generate_speech(text, request.voice_id).
     3. Return Response(content=audio, media_type="audio/mpeg").
     """
-    # Fill here using the workshop prompt
-    pass
+    if not request.text.strip():
+        raise HTTPException(status_code=422, detail="Speech text cannot be blank.")
+    try:
+        audio = await generate_speech(request.text.strip(), request.voice_id)
+    except EdgeTtsError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return Response(content=audio, media_type="audio/mpeg")
 
 
 # ==============================================================================
@@ -53,5 +57,15 @@ async def transcribe_audio(audio: UploadFile = File(...)) -> TranscriptResponse:
     3. Call transcribe() via asyncio.to_thread.
     4. Return TranscriptResponse(transcript=transcript).
     """
-    # Fill here using the workshop prompt
-    pass
+    if audio.content_type not in ALLOWED_AUDIO_TYPES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported audio type.")
+    payload = await audio.read()
+    if not payload:
+        raise HTTPException(status_code=422, detail="Audio payload cannot be empty.")
+    if len(payload) > MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Audio payload is too large.")
+    try:
+        transcript = await asyncio.to_thread(transcribe, payload, audio.filename or "recording", audio.content_type)
+    except GroqSttError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return TranscriptResponse(transcript=transcript)

@@ -29,6 +29,30 @@ def test_local_planner_rejects_unknown_app() -> None:
     assert local_actions.make_local_action_plan("Open a random executable") is None
 
 
+def test_local_planner_routes_explicit_whatsapp_without_confirmation() -> None:
+    assert local_actions.make_local_action_plan("Could you launch WhatsApp for me?") == {
+        "kind": "open_local_app",
+        "app_id": "whatsapp",
+        "label": "WhatsApp",
+        "requires_confirmation": False,
+    }
+
+
+def test_local_planner_does_not_execute_informational_question() -> None:
+    assert local_actions.make_local_action_plan("Tell me about WhatsApp.") is None
+
+
+def test_whatsapp_falls_back_to_web(monkeypatch) -> None:
+    enable_local_actions(monkeypatch)
+    launched: list[str] = []
+    monkeypatch.setattr(local_actions.os, "startfile", lambda target: (_ for _ in ()).throw(OSError("missing app")), raising=False)
+    monkeypatch.setattr("app.services.web_actions.open_website", lambda url, browser, new_tab: launched.append(url))
+
+    local_actions.execute_local_action("whatsapp")
+
+    assert launched == ["https://web.whatsapp.com"]
+
+
 def test_execute_uses_fixed_allowlisted_target(monkeypatch) -> None:
     enable_local_actions(monkeypatch)
     launched: list[str] = []

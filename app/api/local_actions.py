@@ -41,7 +41,7 @@ async def plan_local_action(request: Request, body: LocalActionPlanRequest) -> L
         kind=plan["kind"],
         appId=plan["app_id"],
         label=plan["label"],
-        requiresConfirmation=True,
+        requiresConfirmation=plan["requires_confirmation"],
     )
 
 

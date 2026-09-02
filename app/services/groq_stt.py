@@ -27,5 +27,18 @@ def transcribe(audio: bytes, filename: str, content_type: str) -> str:
     if not settings.groq_api_key:
         raise GroqSttError("Groq is not configured.")
 
-    # Fill here using the workshop prompt
-    pass
+    try:
+        response = requests.post(
+            GROQ_TRANSCRIBE_URL,
+            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            files={"file": (filename, io.BytesIO(audio), content_type)},
+            data={"model": "whisper-large-v3-turbo"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        transcript = response.json()["text"].strip()
+    except (requests.RequestException, KeyError, TypeError, ValueError) as error:
+        raise GroqSttError("Groq could not transcribe the audio.") from error
+    if not transcript:
+        raise GroqSttError("Groq returned an empty transcript.")
+    return transcript

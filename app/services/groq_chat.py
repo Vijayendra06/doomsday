@@ -32,5 +32,18 @@ def generate_reply(history: list[dict[str, str]], user_text: str) -> str:
     if not settings.groq_api_key:
         raise GroqChatError("Groq is not configured.")
 
-    # Fill here using the workshop prompt
-    pass
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history, {"role": "user", "content": user_text}]
+    try:
+        response = requests.post(
+            GROQ_CHAT_URL,
+            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            json={"model": settings.groq_chat_model, "messages": messages, "temperature": 0.4, "max_tokens": 220},
+            timeout=30,
+        )
+        response.raise_for_status()
+        reply = response.json()["choices"][0]["message"]["content"].strip()
+    except (requests.RequestException, KeyError, IndexError, TypeError, ValueError) as error:
+        raise GroqChatError("Groq could not generate a reply.") from error
+    if not reply:
+        raise GroqChatError("Groq returned an empty reply.")
+    return reply

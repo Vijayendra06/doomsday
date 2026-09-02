@@ -5,7 +5,7 @@ from typing import Literal
 
 from app.settings import settings
 
-LocalAppId = Literal["calculator", "notepad", "file_explorer", "vscode"]
+LocalAppId = Literal["calculator", "notepad", "file_explorer", "vscode", "whatsapp"]
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,7 @@ LOCAL_APPS: tuple[LocalApp, ...] = (
     LocalApp("notepad", "Notepad", ("notepad",), "notepad.exe"),
     LocalApp("file_explorer", "File Explorer", ("file explorer", "explorer"), "explorer.exe"),
     LocalApp("vscode", "Visual Studio Code", ("visual studio code", "vs code", "vscode"), "vscode://"),
+    LocalApp("whatsapp", "WhatsApp", ("whatsapp",), r"shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"),
 )
 
 
@@ -39,6 +40,8 @@ def find_local_app(text: str) -> LocalApp | None:
 
 
 def make_local_action_plan(text: str) -> dict[str, str | bool] | None:
+    if not any(verb in " ".join(text.lower().split()) for verb in ("open", "launch", "start")):
+        return None
     app = find_local_app(text)
     if not app:
         return None
@@ -46,7 +49,7 @@ def make_local_action_plan(text: str) -> dict[str, str | bool] | None:
         "kind": "open_local_app",
         "app_id": app.app_id,
         "label": app.label,
-        "requires_confirmation": True,
+        "requires_confirmation": app.app_id != "whatsapp",
     }
 
 
@@ -68,7 +71,13 @@ def execute_local_action(app_id: LocalAppId) -> LocalApp:
 
     # os.startfile delegates a fixed application/protocol target to Windows.
     # It never receives content from the browser, user, or model.
-    os.startfile(app.launch_target)  # type: ignore[attr-defined]
+    try:
+        os.startfile(app.launch_target)  # type: ignore[attr-defined]
+    except OSError:
+        if app.app_id != "whatsapp":
+            raise
+        from app.services.web_actions import open_website
+        open_website("https://web.whatsapp.com", browser="default", new_tab=True)
 
     # Ensure the newly opened or existing app window is brought directly to the front
     if sys.platform == "win32":
